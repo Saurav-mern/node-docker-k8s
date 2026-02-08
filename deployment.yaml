@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-app
+  namespace: node-app
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1 # Allow 1 pod to go down to make room for a new one
+      maxSurge: 0
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-app
+  template:
+    metadata:
+      labels:
+        app: node-app
+    spec:
+      containers:
+        - name: node-app
+          image: 654654451277.dkr.ecr.ap-south-1.amazonaws.com/node-app:1.0.1
+          ports:
+            - containerPort: 3000
