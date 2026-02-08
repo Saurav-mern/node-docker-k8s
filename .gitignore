@@ -1,0 +1,29 @@
+# --- Node.js ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+
+# --- Go ---
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go build command
+# If you name your binary 'main' or 'app', add them specifically:
+node-api-bin
+go-api-bin
+
+# Go workspace file
+go.work
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
