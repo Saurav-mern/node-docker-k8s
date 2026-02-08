@@ -10,6 +10,7 @@ env:
   AWS_REGION_ECR: ap-south-1
   ECR_REPOSITORY: node-app
   ECR_GO_REPOSITORY: go-svc
+  ECR_FRONTEND_REPOSITORY: frontend
   EKS_CLUSTER_NAME: node-app-cluster
 
 jobs:
@@ -53,6 +54,14 @@ jobs:
             -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_GO_REPOSITORY }}:${{ env.IMAGE_TAG }} \
             --push services/go-svc
 
+      # ---------- Build FRONTEND IMAGE ----------
+      - name: Build and push Frontend image
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_FRONTEND_REPOSITORY }}:${{ env.IMAGE_TAG }} \
+            --push services/frontend
+
       # ---------- Connect to EKS ----------
       - name: Update kubeconfig
         run: |
@@ -72,6 +81,14 @@ jobs:
             --set image.repository=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_GO_REPOSITORY }} \
             --set image.tag=${{ env.IMAGE_TAG }}
 
+    # ---------- Deploy FRONTEND ----------
+      - name: Deploy Frontend
+        run: |
+          helm upgrade --install frontend ./charts/frontend \
+            --namespace node-app \
+            --set image.repository=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_FRONTEND_REPOSITORY }} \
+            --set image.tag=${{ env.IMAGE_TAG }}
+
       # ---------- Deploy NODE ----------
       - name: Deploy Node API
         run: |
@@ -84,3 +101,5 @@ jobs:
         run: |
           kubectl rollout status deployment/go-svc -n node-app --timeout=120s
           kubectl rollout status deployment/node-app -n node-app --timeout=120s
+          kubectl rollout status deployment/frontend -n node-app --timeout=120s
+
