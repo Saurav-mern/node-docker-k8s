@@ -1,13 +1,17 @@
-FROM nginx:alpine
+# Stage 1: Build the Svelte app
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
 
+# Stage 2: Serve with Nginx
+FROM nginx:alpine
 # Remove default nginx static assets
 RUN rm -rf /usr/share/nginx/html/*
-
-# Copy the build output from your local machine to the container
-COPY build /usr/share/nginx/html
-
-# Optional: If you want routing to work when you refresh the page 
-# (e.g., localhost:8081/about), we will need an nginx.conf later.
-# For now, let's just get the home page working.
+# Copy the build output from the builder stage
+# NOTE: SvelteKit 'adapter-static' outputs to the 'build' folder
+COPY --from=builder /app/build /usr/share/nginx/html
 
 EXPOSE 80
