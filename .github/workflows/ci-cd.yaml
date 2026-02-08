@@ -6,9 +6,8 @@ on:
       - main
 
 env:
-  # Defining specific regions to avoid confusion
-  AWS_REGION_EKS: ap-southeast-2  # Sydney (EKS)
-  AWS_REGION_ECR: ap-south-1      # Mumbai (ECR)
+  AWS_REGION_EKS: ap-southeast-2
+  AWS_REGION_ECR: ap-south-1
   ECR_REPOSITORY: node-app
   EKS_CLUSTER_NAME: node-app-cluster
 
@@ -25,7 +24,6 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          # We authenticate to Mumbai first to handle ECR
           aws-region: ${{ env.AWS_REGION_ECR }}
 
       - name: Login to Amazon ECR
@@ -38,16 +36,13 @@ jobs:
       - name: Build and push Docker image (amd64)
         run: |
           docker buildx create --use
-          # Note: We use the registry URL from the login step directly 
-          # so we don't have to manually format the account ID.
           docker buildx build \
             --platform linux/amd64 \
             -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} \
-            --push .
+            --push services/node-api
 
       - name: Update kubeconfig
         run: |
-          # We explicitly switch to Sydney for the EKS connection
           aws eks update-kubeconfig \
             --region ${{ env.AWS_REGION_EKS }} \
             --name ${{ env.EKS_CLUSTER_NAME }}
@@ -57,8 +52,7 @@ jobs:
 
       - name: Helm upgrade
         run: |
-          # Passing the full image path to Helm
-          helm upgrade --install node-app ./node-app \
+          helm upgrade --install node-app ./charts/node-api \
             --namespace node-app \
             --create-namespace \
             --set image.repository=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }} \
