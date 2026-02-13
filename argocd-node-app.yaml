@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: node-app-stack
+  namespace: argocd
+spec:
+  project: default
+  # This section defines where the code lives
+  sources:
+    - repoURL: https://github.com/Saurav-mern/node-docker-k8s
+      path: charts/node-api
+      targetRevision: main
+    - repoURL: https://github.com/Saurav-mern/node-docker-k8s
+      path: charts/frontend
+      targetRevision: main
+    - repoURL: https://github.com/Saurav-mern/node-docker-k8s
+      path: charts/go-svc
+      targetRevision: main
+
+  # Where to deploy it
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: node-app
+
+  syncPolicy:
+    automated:
+      prune: true     # Removes pods if you delete them from Git
+      selfHeal: true  # Recreates pods if someone deletes them manually
+    syncOptions:
+      - CreateNamespace=true

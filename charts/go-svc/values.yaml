@@ -1,8 +1,8 @@
 # Triggering fresh build
-replicaCount: 2
+replicaCount: 1
 
 image:
-  repository: REPLACE_ME
+  repository: 654654451277.dkr.ecr.ap-south-1.amazonaws.com/go-svc
   tag: latest
 
 service:
