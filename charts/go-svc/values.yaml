@@ -3,7 +3,7 @@ replicaCount: 1
 
 image:
   repository: 654654451277.dkr.ecr.ap-south-1.amazonaws.com/go-svc
-  tag: latest
+  tag: 014462d
 
 service:
   type: ClusterIP
