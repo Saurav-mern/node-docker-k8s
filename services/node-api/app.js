@@ -4,7 +4,7 @@ const os = require("os");
 const app = express();
 
 // Built-in fetch is available in Node 18+
-const GO_SERVICE_URL = "http://go-svc:8080/process";
+const GO_SERVICE_URL = "http://go-svc.node-app.svc.cluster.local:8080/process";
 
 app.get("/", (req, res) => {
   res.send(`Hello from Pod: ${os.hostname()} 🚀`);

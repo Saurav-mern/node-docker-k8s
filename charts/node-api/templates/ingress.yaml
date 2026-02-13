@@ -16,7 +16,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: node-app
+                name: node-app-stack
                 port:
                   number: 80
 
