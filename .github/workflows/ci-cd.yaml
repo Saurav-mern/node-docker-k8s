@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+# Crucial for the "Commit and Push" step to work
+permissions:
+  contents: write
+
 env:
   AWS_REGION_EKS: ap-southeast-2
   AWS_REGION_ECR: ap-south-1
@@ -14,7 +18,7 @@ env:
   EKS_CLUSTER_NAME: node-app-cluster
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
@@ -38,7 +42,7 @@ jobs:
       - name: Setup Docker Buildx
         run: docker buildx create --use
 
-      # ---------- Build NODE IMAGE ----------
+      # ---------- Build and Push Images ----------
       - name: Build and push Node image
         run: |
           docker buildx build \
@@ -46,7 +50,6 @@ jobs:
             -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} \
             --push services/node-api
 
-      # ---------- Build GO IMAGE ----------
       - name: Build and push Go image
         run: |
           docker buildx build \
@@ -54,7 +57,6 @@ jobs:
             -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_GO_REPOSITORY }}:${{ env.IMAGE_TAG }} \
             --push services/go-svc
 
-      # ---------- Build FRONTEND IMAGE ----------
       - name: Build and push Frontend image
         run: |
           docker buildx build \
@@ -62,44 +64,16 @@ jobs:
             -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_FRONTEND_REPOSITORY }}:${{ env.IMAGE_TAG }} \
             --push services/frontend
 
-      # ---------- Connect to EKS ----------
-      - name: Update kubeconfig
+      # ---------- GitOps: Update Helm Values ----------
+      - name: Update Image Tags in values.yaml
         run: |
-          aws eks update-kubeconfig \
-            --region ${{ env.AWS_REGION_EKS }} \
-            --name ${{ env.EKS_CLUSTER_NAME }}
+          # sed searches for "tag: " and replaces the rest of the line with the new SHA
+          sed -i "s/tag: .*/tag: ${{ env.IMAGE_TAG }}/" charts/node-api/values.yaml
+          sed -i "s/tag: .*/tag: ${{ env.IMAGE_TAG }}/" charts/go-svc/values.yaml
+          sed -i "s/tag: .*/tag: ${{ env.IMAGE_TAG }}/" charts/frontend/values.yaml
 
-      - name: Setup Helm
-        uses: azure/setup-helm@v4
-
-      # ---------- Deploy GO FIRST ----------
-    #   - name: Deploy Go Service
-    #     run: |
-    #       helm upgrade --install go-svc ./charts/go-svc \
-    #         --namespace node-app \
-    #         --create-namespace \
-    #         --set image.repository=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_GO_REPOSITORY }} \
-    #         --set image.tag=${{ env.IMAGE_TAG }}
-
-    # # ---------- Deploy FRONTEND ----------
-    #   - name: Deploy Frontend
-    #     run: |
-    #       helm upgrade --install frontend ./charts/frontend \
-    #         --namespace node-app \
-    #         --set image.repository=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_FRONTEND_REPOSITORY }} \
-    #         --set image.tag=${{ env.IMAGE_TAG }}
-
-    #   # ---------- Deploy NODE ----------
-    #   - name: Deploy Node API
-    #     run: |
-    #       helm upgrade --install node-app ./charts/node-api \
-    #         --namespace node-app \
-    #         --set image.repository=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }} \
-    #         --set image.tag=${{ env.IMAGE_TAG }}
-
-    #   - name: Verify Rollouts
-    #     run: |
-    #       kubectl rollout status deployment/go-svc -n node-app --timeout=120s
-    #       kubectl rollout status deployment/node-app -n node-app --timeout=120s
-    #       kubectl rollout status deployment/frontend -n node-app --timeout=120s
-
+      - name: Commit and Push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update image tags to ${{ env.IMAGE_TAG }} [skip ci]"
+          file_pattern: 'charts/*/values.yaml'
